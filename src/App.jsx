@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, LogOut, ChevronLeft, Save, Edit2, Trash2 } from "lucide-react";
+import { Plus, LogOut, ChevronLeft, Save, Edit2, Trash2, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = "https://pniwgtspagxcxugztrwt.supabase.co";
@@ -166,6 +166,7 @@ export default function ExpenseTrackerApp() {
   const [editingTx, setEditingTx] = useState(null);
   const [editCategory, setEditCategory] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [showAmounts, setShowAmounts] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -778,19 +779,34 @@ export default function ExpenseTrackerApp() {
             {user.email}
           </p>
         </div>
-        <button
-          onClick={logout}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            padding: "8px",
-            display: "flex",
-            alignItems: "center"
-          }}
-        >
-          <LogOut size={24} color="#ef4444" />
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button
+            onClick={() => setShowAmounts(!showAmounts)}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            {showAmounts ? <EyeOff size={24} color="#667eea" /> : <Eye size={24} color="#667eea" />}
+          </button>
+          <button
+            onClick={logout}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <LogOut size={24} color="#ef4444" />
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: "20px" }}>
@@ -829,7 +845,7 @@ export default function ExpenseTrackerApp() {
               fontWeight: "700",
               color: "white"
             }}>
-              ₹{totalSpent.toFixed(2)}
+              {showAmounts ? `₹${totalSpent.toFixed(2)}` : "₹ ******"}
             </p>
           </div>
 
@@ -855,7 +871,7 @@ export default function ExpenseTrackerApp() {
               fontWeight: "700",
               color: "white"
             }}>
-              ₹{totalCredit.toFixed(2)}
+              {showAmounts ? `₹${totalCredit.toFixed(2)}` : "₹ ******"}
             </p>
           </div>
 
@@ -882,7 +898,7 @@ export default function ExpenseTrackerApp() {
               fontWeight: "700",
               color: "white"
             }}>
-              ₹{(totalCredit - totalSpent).toFixed(2)}
+              {showAmounts ? `₹${(totalCredit - totalSpent).toFixed(2)}` : "₹ ******"}
             </p>
           </div>
         </div>
