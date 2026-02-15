@@ -8,6 +8,19 @@ const SUPABASE_ANON_KEY =
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+const CATEGORY_OPTIONS = [
+  'Food',
+  'Groceries',
+  'Health',
+  'Utilities',
+  'Transport',
+  'Rent',
+  'Entertainment',
+  'Salary',
+  'Shopping',
+  'Income',
+  'Other'
+];
 
 const detectCategory = (description) => {
   const lowerDesc = description.toLowerCase();
@@ -151,6 +164,8 @@ export default function ExpenseTrackerApp() {
   const [loading, setLoading] = useState(false);
   const [text, setText] = useState("");
   const [editingTx, setEditingTx] = useState(null);
+  const [editCategory, setEditCategory] = useState("");
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -260,10 +275,11 @@ export default function ExpenseTrackerApp() {
           amount: parsed.amount,
           description: parsed.description,
           type: parsed.type,
-          category: parsed.category,
+          category: editCategory || parsed.category,
         })
         .eq("id", editingTx.id);
       setEditingTx(null);
+      setEditCategory("");
     } else {
       await supabase.from("transactions").insert({
         user_id: user.id,
@@ -283,6 +299,20 @@ export default function ExpenseTrackerApp() {
   const deleteTransaction = async (id) => {
     await supabase.from("transactions").delete().eq("id", id);
     loadTransactions();
+  };
+
+  const updateCategoryInline = async (transactionId, newCategory) => {
+    await supabase
+      .from("transactions")
+      .update({ category: newCategory })
+      .eq("id", transactionId);
+    
+    setTransactions(prevTransactions =>
+      prevTransactions.map(t =>
+        t.id === transactionId ? { ...t, category: newCategory } : t
+      )
+    );
+    setEditingCategoryId(null);
   };
 
   const totalSpent = transactions
@@ -583,6 +613,7 @@ export default function ExpenseTrackerApp() {
               setView("home");
               setText("");
               setEditingTx(null);
+              setEditCategory("");
             }}
             style={{
               background: "none",
@@ -647,6 +678,42 @@ export default function ExpenseTrackerApp() {
                 Enter description and amount (e.g., "Coffee 150")
               </p>
             </div>
+
+            {editingTx && (
+              <div style={{ marginBottom: "24px" }}>
+                <label style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  color: "#4a5568",
+                  fontWeight: "600",
+                  fontSize: "14px"
+                }}>
+                  Category
+                </label>
+                <select
+                  value={editCategory || editingTx.category || ''}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "16px",
+                    border: "2px solid #e2e8f0",
+                    borderRadius: "12px",
+                    fontSize: "16px",
+                    outline: "none",
+                    transition: "border 0.2s",
+                    fontFamily: "inherit",
+                    background: "white",
+                    cursor: "pointer"
+                  }}
+                  onFocus={(e) => e.target.style.border = "2px solid #667eea"}
+                  onBlur={(e) => e.target.style.border = "2px solid #e2e8f0"}
+                >
+                  {CATEGORY_OPTIONS.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <button
               onClick={addOrUpdateTransaction}
@@ -876,16 +943,43 @@ export default function ExpenseTrackerApp() {
                     }}>
                       {t.description}
                     </p>
-                    <span style={{
-                      fontSize: "11px",
-                      padding: "3px 8px",
-                      borderRadius: "12px",
-                      background: t.type === "debit" ? "#fee2e2" : "#d1fae5",
-                      color: t.type === "debit" ? "#991b1b" : "#065f46",
-                      fontWeight: "600"
-                    }}>
-                      {t.category || t.type}
-                    </span>
+                    {editingCategoryId === t.id ? (
+                      <select
+                        value={t.category || 'Other'}
+                        onChange={(e) => updateCategoryInline(t.id, e.target.value)}
+                        onBlur={() => setEditingCategoryId(null)}
+                        autoFocus
+                        style={{
+                          fontSize: "11px",
+                          padding: "3px 8px",
+                          borderRadius: "12px",
+                          background: t.type === "debit" ? "#fee2e2" : "#d1fae5",
+                          color: t.type === "debit" ? "#991b1b" : "#065f46",
+                          fontWeight: "600",
+                          border: "1px solid #667eea",
+                          outline: "none",
+                          cursor: "pointer"
+                        }}
+                      >
+                        {CATEGORY_OPTIONS.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span 
+                        onClick={() => setEditingCategoryId(t.id)}
+                        style={{
+                          fontSize: "11px",
+                          padding: "3px 8px",
+                          borderRadius: "12px",
+                          background: t.type === "debit" ? "#fee2e2" : "#d1fae5",
+                          color: t.type === "debit" ? "#991b1b" : "#065f46",
+                          fontWeight: "600",
+                          cursor: "pointer"
+                        }}>
+                        {t.category || t.type}
+                      </span>
+                    )}
                   </div>
                   <p style={{
                     margin: "4px 0 0 0",
@@ -901,6 +995,7 @@ export default function ExpenseTrackerApp() {
                     onClick={() => {
                       setEditingTx(t);
                       setText(`${t.description} ${t.amount}`);
+                      setEditCategory(t.category || "");
                       setView("add");
                     }}
                     style={{
