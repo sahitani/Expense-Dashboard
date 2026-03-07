@@ -12,36 +12,39 @@ const CATEGORY_OPTIONS = [
   'Food',
   'Groceries',
   'Health',
-  'Utilities',
+  'Utilities & Bills',
   'Transport',
   'Rent',
   'Entertainment',
-  'Salary',
   'Shopping',
+  'Investments',
   'Income',
   'Other'
 ];
 
+// Categories that need migration: old value -> new value
+const CATEGORY_MIGRATIONS = {
+  'Salary': 'Income',
+  'Other Income': 'Income',
+  'Utilities': 'Utilities & Bills',
+};
+
 const detectCategory = (description) => {
   const lowerDesc = description.toLowerCase();
-  
+
   const categoryKeywords = {
+    'Investments': [
+      'sip', 'mutual fund', 'mf', 'stocks', 'shares', 'nse', 'bse',
+      'crypto', 'bitcoin', 'ppf', 'investment', 'zerodha', 'groww'
+    ],
     'Food': ['food', 'restaurant', 'lunch', 'dinner', 'cafe', 'coffee', 'pizza', 'swiggy', 'zomato', 'burger', 'biryani', 'meal'],
     'Groceries': ['grocery', 'supermarket', 'milk', 'vegetables', 'fruits', 'eggs', 'veggies', 'bread', 'rice'],
-
-    'Transport': ['uber', 'ola', 'taxi', 'bus', 'train', 'metro', 'fuel', 'petrol', 'cab', 'auto','Train'],
-    'Health': ['hospital', 'doctor', 'medicine', 'pharmacy', 'clinic', 'medical'],
-    'Shopping': ['amazon', 'flipkart', 'shopping', 'clothes', 'shoes', 'myntra', 'purchase'],
-    'Entertainment': ['movie', 'cinema', 'netflix', 'spotify', 'game', 'prime', 'show'],
-    'Utilities': ['electricity', 'water', 'gas', 'internet', 'mobile', 'bill', 'wifi','Haircut','Salon'],
-
     'Transport': ['uber', 'ola', 'taxi', 'bus', 'train', 'metro', 'fuel', 'petrol', 'cab', 'auto'],
     'Health': ['hospital', 'doctor', 'medicine', 'pharmacy', 'clinic', 'medical'],
     'Shopping': ['amazon', 'flipkart', 'shopping', 'clothes', 'shoes', 'myntra', 'purchase'],
     'Entertainment': ['movie', 'cinema', 'netflix', 'spotify', 'game', 'prime', 'show'],
-    'Utilities': ['electricity', 'water', 'gas', 'internet', 'mobile', 'bill', 'wifi'],
-
-    'Income': ['salary', 'income', 'refund', 'cashback', 'bonus']
+    'Utilities & Bills': ['electricity', 'water', 'gas', 'internet', 'mobile', 'bill', 'wifi', 'haircut', 'salon'],
+    'Income': ['salary', 'income', 'refund', 'cashback', 'bonus'],
   };
 
   for (const [category, keywords] of Object.entries(categoryKeywords)) {
@@ -51,7 +54,7 @@ const detectCategory = (description) => {
       }
     }
   }
-  
+
   return 'Other';
 };
 
@@ -61,7 +64,7 @@ const PieChart = ({ data }) => {
   if (total === 0) return null;
 
   const colors = [
-    '#ef4444', '#f59e0b', '#10b981', '#3b82f6', 
+    '#ef4444', '#f59e0b', '#10b981', '#3b82f6',
     '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'
   ];
 
@@ -175,8 +178,32 @@ export default function ExpenseTrackerApp() {
   }, []);
 
   useEffect(() => {
-    if (user) loadTransactions();
+    if (user) {
+      runCategoryMigration(user.id).then(() => {
+        loadTransactions();
+      });
+    }
   }, [user]);
+
+  // One-time migration: normalizes outdated categories for the logged-in user
+  const runCategoryMigration = async (userId) => {
+    const { data: txns, error } = await supabase
+      .from("transactions")
+      .select("id, category")
+      .eq("user_id", userId);
+
+    if (error || !txns || txns.length === 0) return;
+
+    const updates = txns.filter(t => t.category && CATEGORY_MIGRATIONS[t.category]);
+
+    for (const tx of updates) {
+      const newCategory = CATEGORY_MIGRATIONS[tx.category];
+      await supabase
+        .from("transactions")
+        .update({ category: newCategory })
+        .eq("id", tx.id);
+    }
+  };
 
   const loadTransactions = async () => {
     const { data } = await supabase
@@ -184,7 +211,6 @@ export default function ExpenseTrackerApp() {
       .select("*")
       .order("date", { ascending: false });
     setTransactions(data || []);
-    
 
     if (data && data.length > 0) {
       backfillCategories(data);
@@ -193,8 +219,8 @@ export default function ExpenseTrackerApp() {
 
 
   const backfillCategories = async (txns) => {
-    const needsBackfill = txns.filter(t => !t.category || t.category === '' || t.category === 'Expense' || t.category === 'Income');
-    
+    const needsBackfill = txns.filter(t => !t.category || t.category === '' || t.category === 'Expense');
+
     if (needsBackfill.length === 0) return;
 
     for (const tx of needsBackfill) {
@@ -250,10 +276,9 @@ export default function ExpenseTrackerApp() {
     const amount = amountMatch ? parseFloat(amountMatch[0]) : 0;
     const description = t.replace(/\d+(\.\d+)?/, "").trim();
     const isCredit = /salary|income|refund|cashback|bonus/i.test(t);
-    
 
     const category = detectCategory(description);
-    
+
     return {
       amount,
       description,
@@ -307,7 +332,7 @@ export default function ExpenseTrackerApp() {
       .from("transactions")
       .update({ category: newCategory })
       .eq("id", transactionId);
-    
+
     setTransactions(prevTransactions =>
       prevTransactions.map(t =>
         t.id === transactionId ? { ...t, category: newCategory } : t
@@ -575,7 +600,7 @@ export default function ExpenseTrackerApp() {
             }}>
               Total Spent: ₹{totalSpent.toFixed(2)}
             </h3>
-            
+
             {categoryData.length > 0 ? (
               <PieChart data={categoryData} />
             ) : (
@@ -816,18 +841,18 @@ export default function ExpenseTrackerApp() {
           gap: "16px",
           marginBottom: "24px"
         }}>
-          <div 
+          <div
             onClick={() => setView("chart")}
             style={{
-            background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
-            borderRadius: "16px",
-            padding: "20px",
-            boxShadow: "0 4px 16px rgba(239, 68, 68, 0.3)",
-            cursor: "pointer",
-            transition: "transform 0.2s"
-          }}
-          onMouseOver={(e) => e.currentTarget.style.transform = "translateY(-4px)"}
-          onMouseOut={(e) => e.currentTarget.style.transform = "translateY(0)"}
+              background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+              borderRadius: "16px",
+              padding: "20px",
+              boxShadow: "0 4px 16px rgba(239, 68, 68, 0.3)",
+              cursor: "pointer",
+              transition: "transform 0.2s"
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = "translateY(-4px)"}
+            onMouseOut={(e) => e.currentTarget.style.transform = "translateY(0)"}
           >
             <p style={{
               margin: "0 0 8px 0",
@@ -982,7 +1007,7 @@ export default function ExpenseTrackerApp() {
                         ))}
                       </select>
                     ) : (
-                      <span 
+                      <span
                         onClick={() => setEditingCategoryId(t.id)}
                         style={{
                           fontSize: "11px",
