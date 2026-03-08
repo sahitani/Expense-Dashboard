@@ -170,6 +170,7 @@ export default function ExpenseTrackerApp() {
   const [editCategory, setEditCategory] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [showAmounts, setShowAmounts] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -341,16 +342,29 @@ export default function ExpenseTrackerApp() {
     setEditingCategoryId(null);
   };
 
-  const totalSpent = transactions
+  // Filter transactions to only include current month
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const currentMonthTransactions = transactions.filter((t) => {
+    const transactionDate = new Date(t.date);
+    return (
+      transactionDate.getMonth() === currentMonth &&
+      transactionDate.getFullYear() === currentYear
+    );
+  });
+
+  const totalSpent = currentMonthTransactions
     .filter((t) => t.type === "debit")
     .reduce((s, t) => s + t.amount, 0);
 
-  const totalCredit = transactions
+  const totalCredit = currentMonthTransactions
     .filter((t) => t.type === "credit")
     .reduce((s, t) => s + t.amount, 0);
 
   const getCategoryBreakdown = () => {
-    const debitTransactions = transactions.filter((t) => t.type === "debit");
+    const debitTransactions = currentMonthTransactions.filter((t) => t.type === "debit");
     const categoryTotals = {};
 
     debitTransactions.forEach((t) => {
@@ -772,6 +786,265 @@ export default function ExpenseTrackerApp() {
     );
   }
 
+  if (view === "transactions") {
+    const itemsPerPage = 10;
+    const totalPages = Math.ceil(transactions.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const currentTransactions = transactions.slice(startIndex, endIndex);
+
+    return (
+      <div style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        paddingBottom: "100px"
+      }}>
+        <div style={{
+          background: "white",
+          padding: "20px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
+        }}>
+          <button
+            onClick={() => setView("home")}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <ChevronLeft size={24} color="#1a202c" />
+          </button>
+          <h2 style={{
+            margin: 0,
+            fontSize: "20px",
+            fontWeight: "700",
+            color: "#1a202c"
+          }}>
+            All Transactions
+          </h2>
+        </div>
+
+        <div style={{ padding: "20px" }}>
+          {currentTransactions.length === 0 ? (
+            <div style={{
+              background: "white",
+              borderRadius: "16px",
+              padding: "48px 24px",
+              textAlign: "center",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
+            }}>
+              <p style={{
+                margin: 0,
+                color: "#718096",
+                fontSize: "16px"
+              }}>
+                No transactions yet. Add your first one!
+              </p>
+            </div>
+          ) : (
+            <>
+              {currentTransactions.map((t) => (
+                <div
+                  key={t.id}
+                  style={{
+                    background: "white",
+                    borderRadius: "16px",
+                    padding: "16px",
+                    marginBottom: "12px",
+                    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "4px"
+                    }}>
+                      <p style={{
+                        margin: 0,
+                        fontSize: "16px",
+                        fontWeight: "600",
+                        color: "#1a202c"
+                      }}>
+                        {t.description}
+                      </p>
+                      {editingCategoryId === t.id ? (
+                        <select
+                          value={t.category || 'Other'}
+                          onChange={(e) => updateCategoryInline(t.id, e.target.value)}
+                          onBlur={() => setEditingCategoryId(null)}
+                          autoFocus
+                          style={{
+                            fontSize: "11px",
+                            padding: "3px 8px",
+                            borderRadius: "12px",
+                            background: t.type === "debit" ? "#fee2e2" : "#d1fae5",
+                            color: t.type === "debit" ? "#991b1b" : "#065f46",
+                            fontWeight: "600",
+                            border: "1px solid #667eea",
+                            outline: "none",
+                            cursor: "pointer"
+                          }}
+                        >
+                          {CATEGORY_OPTIONS.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span
+                          onClick={() => setEditingCategoryId(t.id)}
+                          style={{
+                            fontSize: "11px",
+                            padding: "3px 8px",
+                            borderRadius: "12px",
+                            background: t.type === "debit" ? "#fee2e2" : "#d1fae5",
+                            color: t.type === "debit" ? "#991b1b" : "#065f46",
+                            fontWeight: "600",
+                            cursor: "pointer"
+                          }}>
+                          {t.category || t.type}
+                        </span>
+                      )}
+                    </div>
+                    <p style={{
+                      margin: "4px 0 0 0",
+                      fontSize: "12px",
+                      color: "#718096"
+                    }}>
+                      {new Date(t.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                    </p>
+                    <p style={{
+                      margin: "4px 0 0 0",
+                      fontSize: "20px",
+                      fontWeight: "700",
+                      color: t.type === "debit" ? "#ef4444" : "#10b981"
+                    }}>
+                      {t.type === "debit" ? "-" : "+"}₹{t.amount.toFixed(2)}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      onClick={() => {
+                        setEditingTx(t);
+                        setText(`${t.description} ${t.amount}`);
+                        setEditCategory(t.category || "");
+                        setView("add");
+                      }}
+                      style={{
+                        background: "#3b82f6",
+                        border: "none",
+                        borderRadius: "10px",
+                        padding: "10px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      <Edit2 size={16} color="white" />
+                    </button>
+                    <button
+                      onClick={() => deleteTransaction(t.id)}
+                      style={{
+                        background: "#ef4444",
+                        border: "none",
+                        borderRadius: "10px",
+                        padding: "10px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}
+                    >
+                      <Trash2 size={16} color="white" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {totalPages > 1 && (
+                <div style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginTop: "24px"
+                }}>
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    style={{
+                      padding: "10px 16px",
+                      background: currentPage === 1 ? "#e2e8f0" : "white",
+                      color: currentPage === 1 ? "#a0aec0" : "#667eea",
+                      border: "2px solid #667eea",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      cursor: currentPage === 1 ? "not-allowed" : "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    Previous
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        padding: "10px 14px",
+                        background: currentPage === page ? "#667eea" : "white",
+                        color: currentPage === page ? "white" : "#667eea",
+                        border: "2px solid #667eea",
+                        borderRadius: "8px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    style={{
+                      padding: "10px 16px",
+                      background: currentPage === totalPages ? "#e2e8f0" : "white",
+                      color: currentPage === totalPages ? "#a0aec0" : "#667eea",
+                      border: "2px solid #667eea",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                      fontWeight: "600",
+                      cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -955,7 +1228,7 @@ export default function ExpenseTrackerApp() {
           </div>
         ) : (
           <div>
-            {transactions.map((t) => (
+            {transactions.slice(0, 10).map((t) => (
               <div
                 key={t.id}
                 style={{
@@ -1024,6 +1297,13 @@ export default function ExpenseTrackerApp() {
                   </div>
                   <p style={{
                     margin: "4px 0 0 0",
+                    fontSize: "12px",
+                    color: "#718096"
+                  }}>
+                    {new Date(t.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  </p>
+                  <p style={{
+                    margin: "4px 0 0 0",
                     fontSize: "20px",
                     fontWeight: "700",
                     color: t.type === "debit" ? "#ef4444" : "#10b981"
@@ -1070,6 +1350,38 @@ export default function ExpenseTrackerApp() {
                 </div>
               </div>
             ))}
+            {transactions.length > 10 && (
+              <button
+                onClick={() => {
+                  setCurrentPage(1);
+                  setView("transactions");
+                }}
+                style={{
+                  width: "100%",
+                  padding: "16px",
+                  marginTop: "16px",
+                  background: "white",
+                  color: "#667eea",
+                  border: "2px solid #667eea",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = "#667eea";
+                  e.target.style.color = "white";
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = "white";
+                  e.target.style.color = "#667eea";
+                }}
+              >
+                View All Transactions
+              </button>
+            )}
           </div>
         )}
       </div>
