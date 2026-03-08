@@ -171,6 +171,13 @@ export default function ExpenseTrackerApp() {
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [showAmounts, setShowAmounts] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Manual transaction entry form states
+  const [manualAmount, setManualAmount] = useState("");
+  const [manualDescription, setManualDescription] = useState("");
+  const [manualType, setManualType] = useState("debit");
+  const [manualCategory, setManualCategory] = useState("Other");
+  const [manualDate, setManualDate] = useState(new Date().toISOString().split("T")[0]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -340,6 +347,43 @@ export default function ExpenseTrackerApp() {
       )
     );
     setEditingCategoryId(null);
+  };
+
+  const saveManualTransaction = async () => {
+    // Validation
+    if (!manualAmount || parseFloat(manualAmount) <= 0) {
+      alert("Please enter a valid amount");
+      return;
+    }
+    if (!manualDescription.trim()) {
+      alert("Please enter a description");
+      return;
+    }
+
+    try {
+      await supabase.from("transactions").insert({
+        user_id: user.id,
+        amount: parseFloat(manualAmount),
+        description: manualDescription.trim(),
+        type: manualType,
+        category: manualCategory,
+        date: manualDate,
+        transaction_ref: null,
+        raw_sms: null,
+      });
+
+      // Reset form
+      setManualAmount("");
+      setManualDescription("");
+      setManualType("debit");
+      setManualCategory("Other");
+      setManualDate(new Date().toISOString().split("T")[0]);
+      
+      setView("home");
+      loadTransactions();
+    } catch (error) {
+      alert("Error saving transaction: " + error.message);
+    }
   };
 
   // Filter transactions to only include current month
@@ -651,9 +695,11 @@ export default function ExpenseTrackerApp() {
           <button
             onClick={() => {
               setView("home");
-              setText("");
-              setEditingTx(null);
-              setEditCategory("");
+              setManualAmount("");
+              setManualDescription("");
+              setManualType("debit");
+              setManualCategory("Other");
+              setManualDate(new Date().toISOString().split("T")[0]);
             }}
             style={{
               background: "none",
@@ -672,7 +718,7 @@ export default function ExpenseTrackerApp() {
             fontWeight: "700",
             color: "#1a202c"
           }}>
-            {editingTx ? "Edit Transaction" : "Add Transaction"}
+            Add Transaction
           </h2>
         </div>
 
@@ -683,7 +729,9 @@ export default function ExpenseTrackerApp() {
             padding: "24px",
             boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
           }}>
-            <div style={{ marginBottom: "24px" }}>
+            
+            {/* Amount Field */}
+            <div style={{ marginBottom: "20px" }}>
               <label style={{
                 display: "block",
                 marginBottom: "8px",
@@ -691,12 +739,14 @@ export default function ExpenseTrackerApp() {
                 fontWeight: "600",
                 fontSize: "14px"
               }}>
-                Transaction
+                Amount *
               </label>
               <input
-                placeholder="e.g., Milk 100, Salary 50000"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={manualAmount}
+                onChange={(e) => setManualAmount(e.target.value)}
                 style={{
                   width: "100%",
                   padding: "16px",
@@ -710,53 +760,142 @@ export default function ExpenseTrackerApp() {
                 onFocus={(e) => e.target.style.border = "2px solid #667eea"}
                 onBlur={(e) => e.target.style.border = "2px solid #e2e8f0"}
               />
-              <p style={{
-                margin: "8px 0 0 0",
-                fontSize: "13px",
-                color: "#718096"
-              }}>
-                Enter description and amount (e.g., "Coffee 150")
-              </p>
             </div>
 
-            {editingTx && (
-              <div style={{ marginBottom: "24px" }}>
-                <label style={{
-                  display: "block",
-                  marginBottom: "8px",
-                  color: "#4a5568",
-                  fontWeight: "600",
-                  fontSize: "14px"
-                }}>
-                  Category
-                </label>
-                <select
-                  value={editCategory || editingTx.category || ''}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "16px",
-                    border: "2px solid #e2e8f0",
-                    borderRadius: "12px",
-                    fontSize: "16px",
-                    outline: "none",
-                    transition: "border 0.2s",
-                    fontFamily: "inherit",
-                    background: "white",
-                    cursor: "pointer"
-                  }}
-                  onFocus={(e) => e.target.style.border = "2px solid #667eea"}
-                  onBlur={(e) => e.target.style.border = "2px solid #e2e8f0"}
-                >
-                  {CATEGORY_OPTIONS.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Description Field */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{
+                display: "block",
+                marginBottom: "8px",
+                color: "#4a5568",
+                fontWeight: "600",
+                fontSize: "14px"
+              }}>
+                Description / Merchant *
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Coffee Shop, Grocery Store"
+                value={manualDescription}
+                onChange={(e) => setManualDescription(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "16px",
+                  border: "2px solid #e2e8f0",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  outline: "none",
+                  transition: "border 0.2s",
+                  fontFamily: "inherit"
+                }}
+                onFocus={(e) => e.target.style.border = "2px solid #667eea"}
+                onBlur={(e) => e.target.style.border = "2px solid #e2e8f0"}
+              />
+            </div>
 
+            {/* Type Field */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{
+                display: "block",
+                marginBottom: "8px",
+                color: "#4a5568",
+                fontWeight: "600",
+                fontSize: "14px"
+              }}>
+                Type
+              </label>
+              <select
+                value={manualType}
+                onChange={(e) => setManualType(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "16px",
+                  border: "2px solid #e2e8f0",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  outline: "none",
+                  transition: "border 0.2s",
+                  fontFamily: "inherit",
+                  background: "white",
+                  cursor: "pointer"
+                }}
+                onFocus={(e) => e.target.style.border = "2px solid #667eea"}
+                onBlur={(e) => e.target.style.border = "2px solid #e2e8f0"}
+              >
+                <option value="debit">Debit (Money Spent)</option>
+                <option value="credit">Credit (Money Received)</option>
+              </select>
+            </div>
+
+            {/* Category Field */}
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{
+                display: "block",
+                marginBottom: "8px",
+                color: "#4a5568",
+                fontWeight: "600",
+                fontSize: "14px"
+              }}>
+                Category
+              </label>
+              <select
+                value={manualCategory}
+                onChange={(e) => setManualCategory(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "16px",
+                  border: "2px solid #e2e8f0",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  outline: "none",
+                  transition: "border 0.2s",
+                  fontFamily: "inherit",
+                  background: "white",
+                  cursor: "pointer"
+                }}
+                onFocus={(e) => e.target.style.border = "2px solid #667eea"}
+                onBlur={(e) => e.target.style.border = "2px solid #e2e8f0"}
+              >
+                {CATEGORY_OPTIONS.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Date Field */}
+            <div style={{ marginBottom: "24px" }}>
+              <label style={{
+                display: "block",
+                marginBottom: "8px",
+                color: "#4a5568",
+                fontWeight: "600",
+                fontSize: "14px"
+              }}>
+                Date
+              </label>
+              <input
+                type="date"
+                value={manualDate}
+                onChange={(e) => setManualDate(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "16px",
+                  border: "2px solid #e2e8f0",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  outline: "none",
+                  transition: "border 0.2s",
+                  fontFamily: "inherit",
+                  cursor: "pointer"
+                }}
+                onFocus={(e) => e.target.style.border = "2px solid #667eea"}
+                onBlur={(e) => e.target.style.border = "2px solid #e2e8f0"}
+              />
+            </div>
+
+            {/* Save Button */}
             <button
-              onClick={addOrUpdateTransaction}
+              onClick={saveManualTransaction}
               style={{
                 width: "100%",
                 padding: "16px",
@@ -778,7 +917,7 @@ export default function ExpenseTrackerApp() {
               onMouseOut={(e) => e.target.style.transform = "translateY(0)"}
             >
               <Save size={20} />
-              {editingTx ? "Update Transaction" : "Add Transaction"}
+              Save Transaction
             </button>
           </div>
         </div>
