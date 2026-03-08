@@ -74,18 +74,33 @@ if (/debited/i.test(sms)) {
     const merchantMatch = sms.match(/to\s(.+?)\svia/i)
     if (merchantMatch) merchant = merchantMatch[1]
 
-    // ---------- SIMPLE CATEGORY LOGIC ----------
-    let category = "Other"
-
-    if (/salary/i.test(sms)) category = "Salary"
-    else if (/amazon|flipkart/i.test(sms)) category = "Shopping"
-    else if (/uber|ola/i.test(sms)) category = "Transport"
-    else if (/hospital|medical/i.test(sms)) category = "Health"
-    else if (/rent/i.test(sms)) category = "Rent"
-    else if (/upi/i.test(sms)) category = "General Expense"
-
     // HARD CODE YOUR USER ID HERE
     const USER_ID = "c77cbbd3-7868-456a-bce9-d58b043e8a37"
+
+    // ---------- CHECK USER MERCHANT RULES ----------
+    let category = null
+    const { data: merchantRule } = await supabase
+      .from("user_merchant_rules")
+      .select("category")
+      .eq("user_id", USER_ID)
+      .eq("merchant", merchant)
+      .limit(1)
+
+    if (merchantRule && merchantRule.length > 0) {
+      category = merchantRule[0].category
+    }
+
+    // ---------- FALLBACK TO SIMPLE CATEGORY LOGIC ----------
+    if (!category) {
+      category = "Other"
+
+      if (/salary/i.test(sms)) category = "Salary"
+      else if (/amazon|flipkart/i.test(sms)) category = "Shopping"
+      else if (/uber|ola/i.test(sms)) category = "Transport"
+      else if (/hospital|medical/i.test(sms)) category = "Health"
+      else if (/rent/i.test(sms)) category = "Rent"
+      else if (/upi/i.test(sms)) category = "General Expense"
+    }
 
     const { error } = await supabase.from("transactions").insert({
       user_id: USER_ID,
