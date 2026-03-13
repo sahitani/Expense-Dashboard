@@ -406,422 +406,468 @@ export default function ExpenseTrackerApp() {
         
         {/* Dashboard Tab */}
         {activeTab === "dashboard" && (
-          <>
-            {/* Stats Grid */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "16px",
-              marginBottom: "24px"
-            }}>
-              {/* Total Spent */}
-              <div style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "20px",
-                border: "1px solid #e5e5e5"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: "13px", color: "#666", marginBottom: "8px" }}>Total Spent</p>
-                    <p style={{ margin: 0, fontSize: "24px", fontWeight: "600", color: "#000" }}>${totalSpent.toFixed(2)}</p>
-                    <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#999" }}>This month</p>
-                  </div>
-                  <TrendingDown size={20} color="#ef4444" />
-                </div>
-              </div>
+  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
 
-              {/* Total Earned */}
-              <div style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "20px",
-                border: "1px solid #e5e5e5"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: "13px", color: "#666", marginBottom: "8px" }}>Total Earned</p>
-                    <p style={{ margin: 0, fontSize: "24px", fontWeight: "600", color: "#000" }}>${totalCredit.toFixed(2)}</p>
-                    <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#999" }}>This month</p>
-                  </div>
-                  <TrendingUp size={20} color="#10b981" />
-                </div>
-              </div>
+    {/* HERO BALANCE CARD */}
+    <div
+      style={{
+        background: "linear-gradient(90deg,#4f46e5,#9333ea,#ec4899)",
+        borderRadius: "14px",
+        padding: "18px",
+        color: "white",
+      }}
+    >
+      <div style={{ fontSize: "12px", opacity: 0.8 }}>TOTAL BALANCE</div>
+      <div style={{ fontSize: "28px", fontWeight: "700", marginTop: "4px" }}>
+        Rs. {balanceLeft.toFixed(2)}
+      </div>
 
-              {/* Left */}
-              <div style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "20px",
-                border: "1px solid #e5e5e5"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: "13px", color: "#666", marginBottom: "8px" }}>Left</p>
-                    <p style={{ margin: 0, fontSize: "24px", fontWeight: "600", color: "#000" }}>${balanceLeft.toFixed(2)}</p>
-                    <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#999" }}>Balance left</p>
-                  </div>
-                  <Calendar size={20} color="#3b82f6" />
-                </div>
-              </div>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: "14px",
+          fontSize: "13px",
+          opacity: 0.9,
+        }}
+      >
+        <div>
+          <div>Spent</div>
+          <div style={{ fontWeight: "600" }}>Rs. {totalSpent.toFixed(1)}</div>
+        </div>
 
-              {/* Daily Burn */}
-              <div style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "20px",
-                border: "1px solid #e5e5e5"
-              }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <p style={{ margin: 0, fontSize: "13px", color: "#666", marginBottom: "8px" }}>Daily Burn</p>
-                    <p style={{ margin: 0, fontSize: "24px", fontWeight: "600", color: "#000" }}>${dailyBurn.toFixed(2)}</p>
-                    <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#999" }}>Avg daily</p>
-                  </div>
-                  <CreditCard size={20} color="#f59e0b" />
-                </div>
-              </div>
-            </div>
+        <div>
+          <div>Earned</div>
+          <div style={{ fontWeight: "600" }}>Rs. {totalCredit.toFixed(1)}</div>
+        </div>
+      </div>
+    </div>
 
-            {/* Spending Trend Chart */}
-            <div style={{
-              background: "white",
-              borderRadius: "12px",
-              padding: "24px",
-              border: "1px solid #e5e5e5",
-              marginBottom: "24px"
-            }}>
-              <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: "600" }}>Spending Trend</h3>
-              <p style={{ margin: 0, fontSize: "12px", color: "#999" }}>Last 7 days</p>
-              <div style={{ height: "200px", display: "flex", alignItems: "center", justifyContent: "center", marginTop: "20px" }}>
-                <p style={{ color: "#999" }}>Chart placeholder</p>
-              </div>
-            </div>
+    {/* AVAILABLE + DAILY BURN */}
+    <div style={{ display: "flex", gap: "12px" }}>
+    <div
+        style={{
+          flex: 1,
+          background: "#f97316",
+          color: "white",
+          padding: "16px",
+          borderRadius: "12px",
+        }}
+      >
+        <div style={{ fontSize: "12px", opacity: 0.8 }}>Daily Burn</div>
+        <div style={{ fontSize: "20px", fontWeight: "600" }}>
+          Rs. {dailyBurn.toFixed(1)}
+        </div>
+      </div>
+    </div>
 
-            {/* Additional Stats */}
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "16px"
-            }}>
-              <div style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "20px",
-                border: "1px solid #e5e5e5",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: "13px", color: "#666" }}>Active Subscriptions</p>
-                  <p style={{ margin: "8px 0 0 0", fontSize: "32px", fontWeight: "600" }}>{subscriptions.length}</p>
-                </div>
-                <div style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "#dbeafe",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <span style={{ fontSize: "24px" }}>📱</span>
-                </div>
-              </div>
+    {/* SPENDING TREND */}
+    <div
+      style={{
+        background: "#0f172a",
+        borderRadius: "14px",
+        padding: "18px",
+        color: "white",
+      }}
+    >
+      <div style={{ fontSize: "14px", fontWeight: "600" }}>
+        Spending Trend
+      </div>
+      <div style={{ fontSize: "12px", opacity: 0.6 }}>
+        Last 7 days activity
+      </div>
 
-              <div style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "20px",
-                border: "1px solid #e5e5e5",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: "13px", color: "#666" }}>Transactions This Month</p>
-                  <p style={{ margin: "8px 0 0 0", fontSize: "32px", fontWeight: "600" }}>{currentMonthTransactions.length}</p>
-                </div>
-                <div style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "#dcfce7",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <span style={{ fontSize: "24px" }}>📊</span>
-                </div>
-              </div>
+      <div
+        style={{
+          height: "140px",
+          marginTop: "14px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: 0.6,
+        }}
+      >
+        Chart placeholder
+      </div>
+    </div>
 
-              <div style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "20px",
-                border: "1px solid #e5e5e5",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center"
-              }}>
-                <div>
-                  <p style={{ margin: 0, fontSize: "13px", color: "#666" }}>Largest Transaction</p>
-                  <p style={{ margin: "8px 0 0 0", fontSize: "32px", fontWeight: "600" }}>${largestTransaction.toFixed(2)}</p>
-                </div>
-                <div style={{
-                  width: "48px",
-                  height: "48px",
-                  borderRadius: "12px",
-                  background: "#fce7f3",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}>
-                  <span style={{ fontSize: "24px" }}>📈</span>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+    {/* INSIGHT CARDS */}
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div
+        style={{
+          background: "#0f172a",
+          padding: "16px",
+          borderRadius: "12px",
+          color: "white",
+        }}
+      >
+        <div style={{ fontSize: "12px", opacity: 0.6 }}>
+          Active Subscriptions
+        </div>
+        <div style={{ fontSize: "20px", fontWeight: "600" }}>
+          {subscriptions.length}
+        </div>
+      </div>
 
+      <div
+        style={{
+          background: "#0f172a",
+          padding: "16px",
+          borderRadius: "12px",
+          color: "white",
+        }}
+      >
+        <div style={{ fontSize: "12px", opacity: 0.6 }}>
+          Transactions This Month
+        </div>
+        <div style={{ fontSize: "20px", fontWeight: "600" }}>
+          {currentMonthTransactions.length}
+        </div>
+      </div>
+
+      <div
+        style={{
+          background: "#0f172a",
+          padding: "16px",
+          borderRadius: "12px",
+          color: "white",
+        }}
+      >
+        <div style={{ fontSize: "12px", opacity: 0.6 }}>
+          Largest Transaction
+        </div>
+        <div style={{ fontSize: "20px", fontWeight: "600" }}>
+          Rs. {largestTransaction.toFixed(2)}
+        </div>
+      </div>
+    </div>
+
+  </div>
+)}
         {/* Transactions Tab */}
-        {activeTab === "transactions" && (
-          <>
-            <div style={{
-              background: "#000",
+       {activeTab === "transactions" && (
+  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+    {/* HEADER */}
+    <div
+      style={{
+        background: "linear-gradient(90deg,#3b82f6,#9333ea,#ec4899)",
+        borderRadius: "12px",
+        padding: "14px",
+        color: "white",
+        fontSize: "14px",
+        fontWeight: "600",
+        display: "flex",
+        justifyContent: "space-between"
+      }}
+    >
+      <span>All Transactions</span>
+      <span>Download Last Month</span>
+    </div>
+
+    {/* CATEGORY SUMMARY */}
+    <div
+      style={{
+        display: "flex",
+        gap: "10px",
+        overflowX: "auto",
+        paddingBottom: "6px"
+      }}
+    >
+      {CATEGORY_OPTIONS.map((cat, index) => {
+        const count = transactions.filter(t => t.category === cat).length;
+
+        const colors = [
+          "#3b82f6","#8b5cf6","#f97316","#eab308",
+          "#22c55e","#6366f1","#ec4899","#a855f7","#10b981"
+        ];
+
+        return (
+          <div
+            key={cat}
+            style={{
+              minWidth: "90px",
+              padding: "10px",
+              borderRadius: "10px",
+              background: colors[index % colors.length],
               color: "white",
-              padding: "16px 20px",
-              borderRadius: "12px 12px 0 0",
+              fontSize: "11px",
+              textAlign: "center"
+            }}
+          >
+            <div>{cat}</div>
+            <div style={{ fontWeight: "600", fontSize: "14px" }}>{count}</div>
+          </div>
+        );
+      })}
+    </div>
+
+    {/* TRANSACTION LIST */}
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+      {filteredTransactions.slice(0, 10).map((t) => (
+
+        <div
+          key={t.id}
+          style={{
+            background: "#0f172a",
+            borderRadius: "10px",
+            padding: "14px",
+            color: "white",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
+
+          {/* LEFT */}
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "8px",
+                background: "#1e293b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "14px"
+              }}
+            >
+              💳
+            </div>
+
+            <div>
+              <div style={{ fontWeight: "600", fontSize: "13px" }}>
+                {t.description}
+              </div>
+
+              <div style={{ display: "flex", gap: "6px", marginTop: "3px" }}>
+
+                <span
+                  style={{
+                    background: "#1e40af",
+                    padding: "2px 6px",
+                    borderRadius: "6px",
+                    fontSize: "10px"
+                  }}
+                >
+                  {t.category}
+                </span>
+
+                <span
+                  style={{
+                    background: "#065f46",
+                    padding: "2px 6px",
+                    borderRadius: "6px",
+                    fontSize: "10px"
+                  }}
+                >
+                  completed
+                </span>
+
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT */}
+          <div style={{ textAlign: "right" }}>
+            <div
+              style={{
+                color: t.type === "debit" ? "#ef4444" : "#22c55e",
+                fontWeight: "600",
+                fontSize: "13px"
+              }}
+            >
+              {t.type === "debit" ? "-" : "+"}${t.amount.toFixed(2)}
+            </div>
+
+            <div style={{ fontSize: "10px", opacity: 0.6 }}>
+              {new Date(t.date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric"
+              })}
+            </div>
+          </div>
+
+        </div>
+
+      ))}
+    </div>
+
+  </div>
+)}
+
+        {/* Subscriptions Tab */}
+{activeTab === "subscriptions" && (
+  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+
+    {/* OVERVIEW HEADER */}
+    <div
+      style={{
+        background: "linear-gradient(90deg,#3b82f6,#9333ea,#ec4899)",
+        borderRadius: "14px",
+        padding: "18px",
+        color: "white",
+      }}
+    >
+      <div style={{ fontSize: "12px", opacity: 0.8 }}>
+        SUBSCRIPTION OVERVIEW
+      </div>
+
+      <div style={{ fontSize: "28px", fontWeight: "700", marginTop: "4px" }}>
+        {subscriptions.length}
+      </div>
+
+      <div style={{ fontSize: "12px", opacity: 0.8 }}>
+        Active subscriptions
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginTop: "16px",
+        }}
+      >
+        <div>
+          <div style={{ fontSize: "12px", opacity: 0.7 }}>Monthly</div>
+          <div style={{ fontWeight: "600" }}>
+            $
+            {subscriptions
+              .reduce((sum, s) => sum + s.amount, 0)
+              .toFixed(2)}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: "12px", opacity: 0.7 }}>Yearly</div>
+          <div style={{ fontWeight: "600" }}>
+            $
+            {(subscriptions.reduce((sum, s) => sum + s.amount, 0) * 12).toFixed(
+              2
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* SUBSCRIPTION LIST */}
+    {subscriptions.map((sub) => {
+      const nextBilling = new Date(sub.next_billing_date);
+      const today = new Date();
+      const daysUntil = Math.ceil(
+        (nextBilling - today) / (1000 * 60 * 60 * 24)
+      );
+
+      const progress =
+        100 - Math.min(Math.max(daysUntil * 5, 0), 100);
+
+      const barColor =
+        daysUntil <= 5 ? "#f97316" : "#10b981";
+
+      return (
+        <div
+          key={sub.id}
+          style={{
+            background: "#0f172a",
+            borderRadius: "12px",
+            padding: "16px",
+            color: "white",
+          }}
+        >
+          {/* HEADER */}
+          <div
+            style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "0"
-            }}>
-              <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "600" }}>All Transactions</h2>
-              <button onClick={logout} style={{
-                background: "none",
-                border: "none",
-                color: "white",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}>Logout</button>
-            </div>
-
-            {/* Category Filter Chips */}
-            <div style={{
-              background: "white",
-              padding: "16px 20px",
-              borderBottom: "1px solid #e5e5e5",
-              display: "flex",
-              gap: "8px",
-              overflowX: "auto"
-            }}>
-              <button
-                onClick={() => setSelectedCategory("all")}
+              marginBottom: "8px",
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: "600" }}>
+                {sub.merchant}
+              </div>
+              <div
                 style={{
-                  padding: "8px 16px",
-                  borderRadius: "20px",
-                  border: selectedCategory === "all" ? "2px solid #000" : "1px solid #ddd",
-                  background: selectedCategory === "all" ? "#f0f0f0" : "white",
-                  fontSize: "13px",
-                  fontWeight: "500",
-                  cursor: "pointer",
-                  whiteSpace: "nowrap"
+                  fontSize: "11px",
+                  opacity: 0.6,
                 }}
               >
-                All
-              </button>
-              {CATEGORY_OPTIONS.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "20px",
-                    border: selectedCategory === cat ? "2px solid #000" : "1px solid #ddd",
-                    background: selectedCategory === cat ? "#f0f0f0" : "white",
-                    fontSize: "13px",
-                    fontWeight: "500",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap"
-                  }}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-
-            {/* Transaction List */}
-            <div style={{ background: "white", borderRadius: "0 0 12px 12px" }}>
-              {filteredTransactions.slice(0, 10).map((t, index) => (
-                <div
-                  key={t.id}
-                  style={{
-                    padding: "16px 20px",
-                    borderBottom: index < 9 ? "1px solid #f5f5f5" : "none",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                      <p style={{ margin: 0, fontSize: "15px", fontWeight: "500", color: "#000" }}>
-                        {t.description}
-                      </p>
-                    </div>
-                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                      <span style={{ fontSize: "12px", color: "#999" }}>
-                        {new Date(t.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </span>
-                      {editingCategoryId === t.id ? (
-                        <select
-                          value={t.category || 'Other'}
-                          onChange={(e) => updateCategoryInline(t.id, e.target.value)}
-                          onBlur={() => setEditingCategoryId(null)}
-                          autoFocus
-                          style={{
-                            fontSize: "11px",
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                            border: "1px solid #ddd",
-                            background: "#f0f0f0"
-                          }}
-                        >
-                          {CATEGORY_OPTIONS.map(cat => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span
-                          onClick={() => setEditingCategoryId(t.id)}
-                          style={{
-                            fontSize: "11px",
-                            padding: "2px 8px",
-                            borderRadius: "12px",
-                            background: "#f0f0f0",
-                            color: "#666",
-                            cursor: "pointer"
-                          }}
-                        >
-                          {t.category || t.type}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p style={{
-                    margin: 0,
-                    fontSize: "16px",
-                    fontWeight: "600",
-                    color: t.type === "debit" ? "#ef4444" : "#10b981"
-                  }}>
-                    {t.type === "debit" ? "-" : "+"}${t.amount.toFixed(2)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Subscriptions Tab */}
-        {activeTab === "subscriptions" && (
-          <>
-            <div style={{
-              background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-              color: "white",
-              padding: "24px",
-              borderRadius: "12px",
-              marginBottom: "24px"
-            }}>
-              <p style={{ margin: 0, fontSize: "14px", opacity: 0.9 }}>Active Subscriptions</p>
-              <p style={{ margin: "8px 0", fontSize: "32px", fontWeight: "700" }}>{subscriptions.length}</p>
-              <p style={{ margin: 0, fontSize: "14px", opacity: 0.9 }}>Monthly Spend</p>
-              <p style={{ margin: "4px 0 0 0", fontSize: "24px", fontWeight: "600" }}>
-                ${subscriptions.reduce((sum, s) => sum + s.amount, 0).toFixed(2)}
-              </p>
-              <p style={{ margin: "12px 0 0 0", fontSize: "14px", opacity: 0.9 }}>Annual Projection</p>
-              <p style={{ margin: "4px 0 0 0", fontSize: "24px", fontWeight: "600" }}>
-                ${(subscriptions.reduce((sum, s) => sum + s.amount, 0) * 12).toFixed(2)}
-              </p>
-            </div>
-
-            {subscriptions.length === 0 ? (
-              <div style={{
-                background: "white",
-                borderRadius: "12px",
-                padding: "48px",
-                textAlign: "center",
-                border: "1px solid #e5e5e5"
-              }}>
-                <p style={{ margin: 0, color: "#999" }}>No subscriptions detected yet.</p>
+                {sub.billing_cycle}
               </div>
-            ) : (
-              subscriptions.map((sub) => {
-                const nextBilling = new Date(sub.next_billing_date);
-                const today = new Date();
-                const daysUntil = Math.ceil((nextBilling - today) / (1000 * 60 * 60 * 24));
+            </div>
 
-                return (
-                  <div
-                    key={sub.id}
-                    style={{
-                      background: "white",
-                      borderRadius: "12px",
-                      padding: "20px",
-                      marginBottom: "16px",
-                      border: "1px solid #e5e5e5"
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                      <div>
-                        <h4 style={{ margin: 0, fontSize: "16px", fontWeight: "600", color: "#000" }}>
-                          {sub.merchant}
-                        </h4>
-                        <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#666" }}>
-                          {sub.billing_cycle === 'monthly' ? 'Monthly' : sub.billing_cycle}
-                        </p>
-                      </div>
-                      <p style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#000" }}>
-                        ${sub.amount.toFixed(2)}
-                      </p>
-                    </div>
+            <div style={{ fontWeight: "600" }}>
+              ${sub.amount.toFixed(2)}
+            </div>
+          </div>
 
-                    <div style={{
-                      background: "#fef3c7",
-                      borderRadius: "6px",
-                      padding: "8px 12px",
-                      marginBottom: "12px"
-                    }}>
-                      <p style={{ margin: 0, fontSize: "12px", color: "#92400e" }}>
-                        {daysUntil} days until billing
-                      </p>
-                    </div>
+          {/* BILLING INFO */}
+          <div
+            style={{
+              fontSize: "12px",
+              opacity: 0.7,
+              marginBottom: "6px",
+            }}
+          >
+            {daysUntil} days until billing
+          </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <p style={{ margin: 0, fontSize: "13px", color: "#666" }}>
-                        Next Billing: {nextBilling.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </p>
-                      <button style={{
-                        padding: "6px 12px",
-                        background: "none",
-                        border: "1px solid #ddd",
-                        borderRadius: "6px",
-                        fontSize: "12px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "4px"
-                      }}>
-                        Manage Subscription →
-                      </button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </>
-        )}
+          {/* PROGRESS BAR */}
+          <div
+            style={{
+              height: "6px",
+              background: "#1e293b",
+              borderRadius: "6px",
+              overflow: "hidden",
+              marginBottom: "10px",
+            }}
+          >
+            <div
+              style={{
+                width: `${progress}%`,
+                background: barColor,
+                height: "100%",
+              }}
+            />
+          </div>
+
+          {/* NEXT BILLING */}
+          <div
+            style={{
+              fontSize: "12px",
+              opacity: 0.6,
+              marginBottom: "8px",
+            }}
+          >
+            Next billing:{" "}
+            {nextBilling.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
+          </div>
+
+          <button
+            style={{
+              width: "100%",
+              padding: "6px",
+              borderRadius: "6px",
+              border: "1px solid #334155",
+              background: "transparent",
+              color: "white",
+              fontSize: "12px",
+              cursor: "pointer",
+            }}
+          >
+            Manage Subscription
+          </button>
+        </div>
+      );
+    })}
+  </div>
+)}
       </div>
 
       {/* Bottom Navigation */}
