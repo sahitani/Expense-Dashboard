@@ -69,10 +69,50 @@ if (/debited/i.test(sms)) {
   type = "credit"
 }
 
-    // ---------- EXTRACT MERCHANT ----------
-    let merchant = "Unknown"
-    const merchantMatch = sms.match(/to\s(.+?)\svia/i)
-    if (merchantMatch) merchant = merchantMatch[1]
+// ---------- MERCHANT EXTRACTION ----------
+// ---------- MERCHANT EXTRACTION (ROBUST VERSION) ----------
+let merchant = "unknown"
+
+// normalize SMS
+const normalizedSms = sms.replace(/\s+/g, " ").trim()
+
+const patterns = [
+  /credited to ([A-Za-z0-9\s&@.-]+)/i,
+  /paid to ([A-Za-z0-9\s&@.-]+)/i,
+  /towards ([A-Za-z0-9\s&@.-]+)/i,
+  /to ([A-Za-z0-9\s&@.-]+?) via UPI/i,
+  /to ([A-Za-z0-9\s&@.-]+?) UPI/i,
+  /UPI\s*[-:]?\s*([A-Za-z0-9\s&@.-]+)/i,
+  /for ([A-Za-z0-9\s&@.-]+?) (?:Ref|Txn|UPI|on)/i,
+]
+
+for (const pattern of patterns) {
+  const match = normalizedSms.match(pattern)
+  if (match && match[1]) {
+    merchant = match[1].trim()
+    break
+  }
+}
+
+// ---------- CLEAN MERCHANT STRING ----------
+if (merchant !== "unknown") {
+  merchant = merchant
+    .replace(/via UPI.*/i, "")
+    .replace(/UPI.*/i, "")
+    .replace(/Ref.*/i, "")
+    .replace(/Txn.*/i, "")
+    .replace(/AutoPay.*/i, "")
+    .replace(/Retrieval.*/i, "")
+    .replace(/IMPS.*/i, "")
+    .replace(/NEFT.*/i, "")
+    .replace(/on \d{1,2}-[A-Za-z]{3}-\d{2}.*/i, "")
+    .trim()
+}
+
+// ---------- FINAL SAFETY ----------
+if (!merchant || merchant.length > 60) {
+  merchant = "unknown"
+}
 
     // HARD CODE YOUR USER ID HERE
     const USER_ID = "c77cbbd3-7868-456a-bce9-d58b043e8a37"
@@ -113,8 +153,80 @@ if (/debited/i.test(sms)) {
       transaction_ref: transactionRef,
     })
 
+// ---------- SAVE / LEARN MERCHANT RULE ----------
+await supabase
+  .from("user_merchant_rules")
+  .upsert({
+    user_id: USER_ID,
+    merchant: merchant,
+    category: category
+  }, {
+    onConflict: "user_id,merchant"
+  })
+
     if (error) {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 })
+    }
+
+    // ---------- SUBSCRIPTION DETECTION ----------
+    let isSubscription = false
+
+    // Condition 1: Keyword Detection
+    const subscriptionKeywords = /autopay|subscription|renewal|membership|recurring/i
+    if (subscriptionKeywords.test(sms)) {
+      isSubscription = true
+    }
+
+    // Condition 2: Recurring Detection (same merchant + amount in 25-35 days)
+    if (!isSubscription && merchant !== "unknown" && amount > 0) {
+      const thirtyFiveDaysAgo = new Date()
+      thirtyFiveDaysAgo.setDate(thirtyFiveDaysAgo.getDate() - 35)
+
+      const { data: similarTransactions } = await supabase
+        .from("transactions")
+        .select("date")
+        .eq("user_id", USER_ID)
+        .eq("description", merchant)
+        .eq("amount", amount)
+        .gte("date", thirtyFiveDaysAgo.toISOString().split("T")[0])
+        .order("date", { ascending: false })
+
+      if (similarTransactions && similarTransactions.length >= 2) {
+        // Check if any two transactions are 25-35 days apart
+        for (let i = 0; i < similarTransactions.length - 1; i++) {
+          for (let j = i + 1; j < similarTransactions.length; j++) {
+            const date1 = new Date(similarTransactions[i].date)
+            const date2 = new Date(similarTransactions[j].date)
+            const daysDiff = Math.abs((date1.getTime() - date2.getTime()) / (1000 * 60 * 60 * 24))
+            
+            if (daysDiff >= 25 && daysDiff <= 35) {
+              isSubscription = true
+              break
+            }
+          }
+          if (isSubscription) break
+        }
+      }
+    }
+
+    // If subscription detected, create or update subscription record
+    if (isSubscription) {
+      const currentDate = new Date()
+      const nextBillingDate = new Date(currentDate)
+      nextBillingDate.setMonth(nextBillingDate.getMonth() + 1)
+
+      await supabase
+        .from("subscriptions")
+        .upsert({
+          user_id: USER_ID,
+          merchant: merchant,
+          amount: amount,
+          billing_cycle: "monthly",
+          next_billing_date: nextBillingDate.toISOString().split("T")[0],
+          status: "active"
+        }, {
+          onConflict: "user_id,merchant,amount"
+        })
     }
 
     return new Response(JSON.stringify({ success: true }), { status: 200 })
