@@ -178,6 +178,12 @@ export default function ExpenseTrackerApp() {
   const [manualType, setManualType] = useState("debit");
   const [manualCategory, setManualCategory] = useState("Other");
   const [manualDate, setManualDate] = useState(new Date().toISOString().split("T")[0]);
+  
+  // Month and Year filter states
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [subscriptions, setSubscriptions] = useState([]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -189,6 +195,7 @@ export default function ExpenseTrackerApp() {
     if (user) {
       runCategoryMigration(user.id).then(() => {
         loadTransactions();
+        loadSubscriptions();
       });
     }
   }, [user]);
@@ -223,6 +230,15 @@ export default function ExpenseTrackerApp() {
     if (data && data.length > 0) {
       backfillCategories(data);
     }
+  };
+
+  const loadSubscriptions = async () => {
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("next_billing_date", { ascending: true });
+    setSubscriptions(data || []);
   };
 
 
@@ -335,19 +351,37 @@ export default function ExpenseTrackerApp() {
     loadTransactions();
   };
 
-  const updateCategoryInline = async (transactionId, newCategory) => {
-    await supabase
-      .from("transactions")
-      .update({ category: newCategory })
-      .eq("id", transactionId);
+// Replace the existing updateCategoryInline function with this:
 
-    setTransactions(prevTransactions =>
-      prevTransactions.map(t =>
-        t.id === transactionId ? { ...t, category: newCategory } : t
-      )
-    );
-    setEditingCategoryId(null);
-  };
+const updateCategoryInline = async (transactionId, newCategory) => {
+  // Find the transaction to get merchant name
+  const transaction = transactions.find(t => t.id === transactionId);
+  
+  await supabase
+    .from("transactions")
+    .update({ category: newCategory })
+    .eq("id", transactionId);
+
+  // Save merchant rule for future transactions
+  if (transaction && transaction.description) {
+    await supabase
+      .from("user_merchant_rules")
+      .upsert({
+        user_id: user.id,
+        merchant: transaction.description,
+        category: newCategory
+      }, {
+        onConflict: 'user_id,merchant'
+      });
+  }
+
+  setTransactions(prevTransactions =>
+    prevTransactions.map(t =>
+      t.id === transactionId ? { ...t, category: newCategory } : t
+    )
+  );
+  setEditingCategoryId(null);
+};
 
   const saveManualTransaction = async () => {
     // Validation
@@ -386,16 +420,12 @@ export default function ExpenseTrackerApp() {
     }
   };
 
-  // Filter transactions to only include current month
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
+  // Filter transactions to only include selected month and year
   const currentMonthTransactions = transactions.filter((t) => {
     const transactionDate = new Date(t.date);
     return (
-      transactionDate.getMonth() === currentMonth &&
-      transactionDate.getFullYear() === currentYear
+      transactionDate.getMonth() === selectedMonth &&
+      transactionDate.getFullYear() === selectedYear
     );
   });
 
@@ -419,6 +449,17 @@ export default function ExpenseTrackerApp() {
     return Object.entries(categoryTotals)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
+  };
+
+  const classifySubscription = (merchant) => {
+    const merchantLower = merchant.toLowerCase();
+    
+    const productivity = ['linkedin', 'naukri', 'chatgpt', 'claude', 'canva', 'google'];
+    const entertainment = ['netflix', 'prime', 'spotify', 'hotstar', 'apple music', 'youtube'];
+    
+    if (productivity.some(p => merchantLower.includes(p))) return 'Productivity';
+    if (entertainment.some(e => merchantLower.includes(e))) return 'Entertainment';
+    return 'Other';
   };
 
   if (!user) {
@@ -1184,6 +1225,296 @@ export default function ExpenseTrackerApp() {
     );
   }
 
+  if (view === "subscriptions") {
+    const productivitySubs = subscriptions.filter(s => classifySubscription(s.merchant) === 'Productivity');
+    const entertainmentSubs = subscriptions.filter(s => classifySubscription(s.merchant) === 'Entertainment');
+    const otherSubs = subscriptions.filter(s => classifySubscription(s.merchant) === 'Other');
+
+    return (
+      <div style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        paddingBottom: "100px"
+      }}>
+        <div style={{
+          background: "white",
+          padding: "20px",
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
+        }}>
+          <button
+            onClick={() => setView("home")}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: "8px",
+              display: "flex",
+              alignItems: "center"
+            }}
+          >
+            <ChevronLeft size={24} color="#1a202c" />
+          </button>
+          <h2 style={{
+            margin: 0,
+            fontSize: "20px",
+            fontWeight: "700",
+            color: "#1a202c"
+          }}>
+            Subscriptions
+          </h2>
+        </div>
+
+        <div style={{ padding: "20px" }}>
+          {subscriptions.length === 0 ? (
+            <div style={{
+              background: "white",
+              borderRadius: "16px",
+              padding: "48px 24px",
+              textAlign: "center",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
+            }}>
+              <p style={{
+                margin: 0,
+                color: "#718096",
+                fontSize: "16px"
+              }}>
+                No subscriptions detected yet.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Productivity Section */}
+              {productivitySubs.length > 0 && (
+                <>
+                  <h3 style={{
+                    fontSize: "16px",
+                    fontWeight: "700",
+                    color: "white",
+                    marginBottom: "12px",
+                    marginTop: "0"
+                  }}>
+                    Productivity
+                  </h3>
+                  {productivitySubs.map((sub) => (
+                    <div
+                      key={sub.id}
+                      style={{
+                        background: "white",
+                        borderRadius: "16px",
+                        padding: "20px",
+                        marginBottom: "12px",
+                        boxShadow: "0 2px 12px rgba(0,0,0,0.08)"
+                      }}
+                    >
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "12px"
+                      }}>
+                        <h4 style={{
+                          margin: 0,
+                          fontSize: "18px",
+                          fontWeight: "700",
+                          color: "#1a202c"
+                        }}>
+                          {sub.merchant}
+                        </h4>
+                        <span style={{
+                          fontSize: "11px",
+                          padding: "4px 12px",
+                          borderRadius: "12px",
+                          background: sub.status === 'active' ? "#d1fae5" : "#fee2e2",
+                          color: sub.status === 'active' ? "#065f46" : "#991b1b",
+                          fontWeight: "600"
+                        }}>
+                          {sub.status}
+                        </span>
+                      </div>
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}>
+                        <p style={{
+                          margin: 0,
+                          fontSize: "20px",
+                          fontWeight: "700",
+                          color: "#667eea"
+                        }}>
+                          ₹{sub.amount.toFixed(2)} / {sub.billing_cycle}
+                        </p>
+                        <p style={{
+                          margin: 0,
+                          fontSize: "13px",
+                          color: "#718096"
+                        }}>
+                          Next billing: {new Date(sub.next_billing_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Entertainment Section */}
+              {entertainmentSubs.length > 0 && (
+                <>
+                  <h3 style={{
+                    fontSize: "16px",
+                    fontWeight: "700",
+                    color: "white",
+                    marginBottom: "12px",
+                    marginTop: "24px"
+                  }}>
+                    Entertainment
+                  </h3>
+                  {entertainmentSubs.map((sub) => (
+                    <div
+                      key={sub.id}
+                      style={{
+                        background: "white",
+                        borderRadius: "16px",
+                        padding: "20px",
+                        marginBottom: "12px",
+                        boxShadow: "0 2px 12px rgba(0,0,0,0.08)"
+                      }}
+                    >
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "12px"
+                      }}>
+                        <h4 style={{
+                          margin: 0,
+                          fontSize: "18px",
+                          fontWeight: "700",
+                          color: "#1a202c"
+                        }}>
+                          {sub.merchant}
+                        </h4>
+                        <span style={{
+                          fontSize: "11px",
+                          padding: "4px 12px",
+                          borderRadius: "12px",
+                          background: sub.status === 'active' ? "#d1fae5" : "#fee2e2",
+                          color: sub.status === 'active' ? "#065f46" : "#991b1b",
+                          fontWeight: "600"
+                        }}>
+                          {sub.status}
+                        </span>
+                      </div>
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}>
+                        <p style={{
+                          margin: 0,
+                          fontSize: "20px",
+                          fontWeight: "700",
+                          color: "#667eea"
+                        }}>
+                          ₹{sub.amount.toFixed(2)} / {sub.billing_cycle}
+                        </p>
+                        <p style={{
+                          margin: 0,
+                          fontSize: "13px",
+                          color: "#718096"
+                        }}>
+                          Next billing: {new Date(sub.next_billing_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {/* Other Section */}
+              {otherSubs.length > 0 && (
+                <>
+                  <h3 style={{
+                    fontSize: "16px",
+                    fontWeight: "700",
+                    color: "white",
+                    marginBottom: "12px",
+                    marginTop: "24px"
+                  }}>
+                    Other
+                  </h3>
+                  {otherSubs.map((sub) => (
+                    <div
+                      key={sub.id}
+                      style={{
+                        background: "white",
+                        borderRadius: "16px",
+                        padding: "20px",
+                        marginBottom: "12px",
+                        boxShadow: "0 2px 12px rgba(0,0,0,0.08)"
+                      }}
+                    >
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "12px"
+                      }}>
+                        <h4 style={{
+                          margin: 0,
+                          fontSize: "18px",
+                          fontWeight: "700",
+                          color: "#1a202c"
+                        }}>
+                          {sub.merchant}
+                        </h4>
+                        <span style={{
+                          fontSize: "11px",
+                          padding: "4px 12px",
+                          borderRadius: "12px",
+                          background: sub.status === 'active' ? "#d1fae5" : "#fee2e2",
+                          color: sub.status === 'active' ? "#065f46" : "#991b1b",
+                          fontWeight: "600"
+                        }}>
+                          {sub.status}
+                        </span>
+                      </div>
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center"
+                      }}>
+                        <p style={{
+                          margin: 0,
+                          fontSize: "20px",
+                          fontWeight: "700",
+                          color: "#667eea"
+                        }}>
+                          ₹{sub.amount.toFixed(2)} / {sub.billing_cycle}
+                        </p>
+                        <p style={{
+                          margin: 0,
+                          fontSize: "13px",
+                          color: "#718096"
+                        }}>
+                          Next billing: {new Date(sub.next_billing_date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{
       minHeight: "100vh",
@@ -1247,6 +1578,90 @@ export default function ExpenseTrackerApp() {
       </div>
 
       <div style={{ padding: "20px" }}>
+        {/* Month and Year Filters */}
+        <div style={{
+          display: "flex",
+          gap: "12px",
+          marginBottom: "20px",
+          background: "white",
+          padding: "16px",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+        }}>
+          <div style={{ flex: 1 }}>
+            <label style={{
+              display: "block",
+              marginBottom: "8px",
+              color: "#4a5568",
+              fontWeight: "600",
+              fontSize: "14px"
+            }}>
+              Month
+            </label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "2px solid #e2e8f0",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                outline: "none",
+                cursor: "pointer",
+                background: "white",
+                color: "#1a202c"
+              }}
+            >
+              <option value={0}>January</option>
+              <option value={1}>February</option>
+              <option value={2}>March</option>
+              <option value={3}>April</option>
+              <option value={4}>May</option>
+              <option value={5}>June</option>
+              <option value={6}>July</option>
+              <option value={7}>August</option>
+              <option value={8}>September</option>
+              <option value={9}>October</option>
+              <option value={10}>November</option>
+              <option value={11}>December</option>
+            </select>
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <label style={{
+              display: "block",
+              marginBottom: "8px",
+              color: "#4a5568",
+              fontWeight: "600",
+              fontSize: "14px"
+            }}>
+              Year
+            </label>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              style={{
+                width: "100%",
+                padding: "12px",
+                border: "2px solid #e2e8f0",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "600",
+                outline: "none",
+                cursor: "pointer",
+                background: "white",
+                color: "#1a202c"
+              }}
+            >
+              {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
@@ -1338,6 +1753,93 @@ export default function ExpenseTrackerApp() {
               {showAmounts ? `₹${(totalCredit - totalSpent).toFixed(2)}` : "₹ ******"}
             </p>
           </div>
+
+          {/* Monthly Burn Projection Card */}
+          {(() => {
+            // Calculate days passed in selected month
+            const today = new Date();
+            const isCurrentMonth = selectedMonth === today.getMonth() && selectedYear === today.getFullYear();
+            const daysPassed = isCurrentMonth ? today.getDate() : new Date(selectedYear, selectedMonth + 1, 0).getDate();
+            
+            // Calculate total days in selected month
+            const totalDaysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+
+  // NEW: totalSpent excluding investments
+  const totalSpent = transactions
+    .filter(t => t.type === "debit" && t.category !== "Investment")
+    .reduce((sum, t) => sum + t.amount, 0);
+            
+            // Calculate daily average spend
+            const dailyAvgSpend = daysPassed > 0 ? totalSpent / daysPassed : 0;
+            
+            // Calculate projected month spend
+            const projectedMonthSpend = dailyAvgSpend * totalDaysInMonth;
+            
+            return (
+              <div style={{
+                background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                borderRadius: "16px",
+                padding: "20px",
+                gridColumn: "1 / -1",
+                boxShadow: "0 4px 16px rgba(245, 158, 11, 0.3)"
+              }}>
+                <p style={{
+                  margin: "0 0 12px 0",
+                  fontSize: "13px",
+                  color: "rgba(255,255,255,0.9)",
+                  fontWeight: "600",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px"
+                }}>
+                  Projected Month Spend
+                </p>
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "16px"
+                }}>
+                  <div>
+                    <p style={{
+                      margin: "0 0 4px 0",
+                      fontSize: "12px",
+                      color: "rgba(255,255,255,0.8)",
+                      fontWeight: "500"
+                    }}>
+                      Daily Avg Spend
+                    </p>
+                    <p style={{
+                      margin: 0,
+                      fontSize: "20px",
+                      fontWeight: "700",
+                      color: "white"
+                    }}>
+                      {showAmounts ? `₹${dailyAvgSpend.toFixed(2)}` : "₹ ******"}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{
+                      margin: "0 0 4px 0",
+                      fontSize: "12px",
+                      color: "rgba(255,255,255,0.8)",
+                      fontWeight: "500"
+                    }}>
+                      Projected Total
+                    </p>
+                    <p style={{
+                      margin: 0,
+                      fontSize: "24px",
+                      fontWeight: "700",
+                      color: "white"
+                    }}>
+                      {showAmounts ? `₹${projectedMonthSpend.toFixed(2)}` : "₹ ******"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <h3 style={{
@@ -1519,6 +2021,35 @@ export default function ExpenseTrackerApp() {
                 }}
               >
                 View All Transactions
+              </button>
+            )}
+            {subscriptions.length > 0 && (
+              <button
+                onClick={() => setView("subscriptions")}
+                style={{
+                  width: "100%",
+                  padding: "16px",
+                  marginTop: "16px",
+                  background: "white",
+                  color: "#667eea",
+                  border: "2px solid #667eea",
+                  borderRadius: "12px",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.background = "#667eea";
+                  e.target.style.color = "white";
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.background = "white";
+                  e.target.style.color = "#667eea";
+                }}
+              >
+                View Subscriptions ({subscriptions.length})
               </button>
             )}
           </div>
