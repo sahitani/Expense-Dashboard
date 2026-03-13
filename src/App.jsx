@@ -402,7 +402,7 @@ export default function ExpenseTrackerApp() {
       paddingBottom: "80px"
     }}>
       {/* Main Content */}
-      <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "20px" }}>
+      <div style={{ width: "100%", maxWidth: "520px", margin: "0 auto", padding: "16px",    overflowX: "hidden" }}>
         
         {/* Dashboard Tab */}
         {activeTab === "dashboard" && (
@@ -544,159 +544,301 @@ export default function ExpenseTrackerApp() {
 
   </div>
 )}
-        {/* Transactions Tab */}
-       {activeTab === "transactions" && (
-  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
 
-    {/* HEADER */}
+ {/* Transactions Tab */}
+{activeTab === "transactions" && (
+
+  <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+{/* HEADER */}
+<div
+  style={{
+    background: "linear-gradient(90deg,#3b82f6,#9333ea,#ec4899)",
+    borderRadius: "12px",
+    padding: "14px",
+    color: "white",
+    fontSize: "14px",
+    fontWeight: "600",
+    display: "flex",
+    justifyContent: "space-between"
+  }}
+>
+  <span>All Transactions</span>
+  <span>Download Last Month</span>
+</div>
+
+{/* CATEGORY SUMMARY */}
+<div
+  style={{
+    display: "flex",
+    gap: "10px",
+    overflowX: "auto",
+    paddingBottom: "6px"
+  }}
+>
+  {CATEGORY_OPTIONS.map((cat, index) => {
+    const count = transactions.filter(t => t.category === cat).length;
+
+    const colors = [
+      "#3b82f6","#8b5cf6","#f97316","#eab308",
+      "#22c55e","#6366f1","#ec4899","#a855f7","#10b981"
+    ];
+
+    return (
+      <div
+        key={cat}
+        style={{
+          minWidth: "90px",
+          padding: "10px",
+          borderRadius: "10px",
+          background: colors[index % colors.length],
+          color: "white",
+          fontSize: "11px",
+          textAlign: "center"
+        }}
+      >
+        <div>{cat}</div>
+        <div style={{ fontWeight: "600", fontSize: "14px" }}>{count}</div>
+      </div>
+    );
+  })}
+</div>
+
+{/* TRANSACTION LIST */}
+<div
+  style={{
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    width: "100%"
+  }}
+>
+{(() => {
+
+const sortedTransactions = [...filteredTransactions]
+.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+.slice(0, 10);
+
+const groups = {};
+
+sortedTransactions.forEach((t) => {
+const d = new Date(
+  new Date(t.created_at).toLocaleString("en-US", {
+    timeZone: "Asia/Kolkata"
+  })
+);
+
+const today = new Date();
+const yesterday = new Date();
+yesterday.setDate(today.getDate() - 1);
+
+let label;
+
+if (d.toDateString() === today.toDateString()) {
+  label = "Today";
+} else if (d.toDateString() === yesterday.toDateString()) {
+  label = "Yesterday";
+} else {
+  label = d.toLocaleDateString("en-IN", {
+    month: "short",
+    day: "numeric"
+  });
+}
+
+if (!groups[label]) groups[label] = [];
+groups[label].push(t);
+});
+
+return Object.entries(groups).map(([label, txns]) => (
+<div key={label}>
+
+  {/* DATE HEADER */}
+  <div
+    style={{
+      color: "#94a3b8",
+      fontSize: "12px",
+      marginTop: "10px",
+      marginBottom: "4px"
+    }}
+  >
+    {label}
+  </div>
+
+  {txns.map((t) => (
+
     <div
+      key={t.id}
       style={{
-        background: "linear-gradient(90deg,#3b82f6,#9333ea,#ec4899)",
+        background: "#0f172a",
         borderRadius: "12px",
         padding: "14px",
         color: "white",
-        fontSize: "14px",
-        fontWeight: "600",
         display: "flex",
-        justifyContent: "space-between"
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+        boxSizing: "border-box",
+        overflow: "hidden"
       }}
     >
-      <span>All Transactions</span>
-      <span>Download Last Month</span>
-    </div>
 
-    {/* CATEGORY SUMMARY */}
-    <div
-      style={{
-        display: "flex",
-        gap: "10px",
-        overflowX: "auto",
-        paddingBottom: "6px"
-      }}
-    >
-      {CATEGORY_OPTIONS.map((cat, index) => {
-        const count = transactions.filter(t => t.category === cat).length;
+      {/* LEFT SECTION */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          flex: 1,
+          minWidth: 0
+        }}
+      >
 
-        const colors = [
-          "#3b82f6","#8b5cf6","#f97316","#eab308",
-          "#22c55e","#6366f1","#ec4899","#a855f7","#10b981"
-        ];
-
-        return (
-          <div
-            key={cat}
-            style={{
-              minWidth: "90px",
-              padding: "10px",
-              borderRadius: "10px",
-              background: colors[index % colors.length],
-              color: "white",
-              fontSize: "11px",
-              textAlign: "center"
-            }}
-          >
-            <div>{cat}</div>
-            <div style={{ fontWeight: "600", fontSize: "14px" }}>{count}</div>
-          </div>
-        );
-      })}
-    </div>
-
-    {/* TRANSACTION LIST */}
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-      {filteredTransactions.slice(0, 10).map((t) => (
-
+        {/* ICON */}
         <div
-          key={t.id}
           style={{
-            background: "#0f172a",
-            borderRadius: "10px",
-            padding: "14px",
-            color: "white",
+            width: "32px",
+            height: "32px",
+            borderRadius: "8px",
+            background: "#1e293b",
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "14px",
+            flexShrink: 0
+          }}
+        >
+          💳
+        </div>
+
+        {/* TEXT */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0
           }}
         >
 
-          {/* LEFT */}
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-
-            <div
-              style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
-                background: "#1e293b",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "14px"
-              }}
-            >
-              💳
-            </div>
-
-            <div>
-              <div style={{ fontWeight: "600", fontSize: "13px" }}>
-                {t.description}
-              </div>
-
-              <div style={{ display: "flex", gap: "6px", marginTop: "3px" }}>
-
-                <span
-                  style={{
-                    background: "#1e40af",
-                    padding: "2px 6px",
-                    borderRadius: "6px",
-                    fontSize: "10px"
-                  }}
-                >
-                  {t.category}
-                </span>
-
-                <span
-                  style={{
-                    background: "#065f46",
-                    padding: "2px 6px",
-                    borderRadius: "6px",
-                    fontSize: "10px"
-                  }}
-                >
-                  completed
-                </span>
-
-              </div>
-            </div>
+          {/* MERCHANT */}
+          <div
+            style={{
+              fontWeight: "600",
+              fontSize: "13px",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis"
+            }}
+          >
+            {t.description}
           </div>
 
-          {/* RIGHT */}
-          <div style={{ textAlign: "right" }}>
-            <div
+          {/* TAGS */}
+          <div
+            style={{
+              display: "flex",
+              gap: "6px",
+              marginTop: "3px",
+              flexWrap: "wrap"
+            }}
+          >
+{editingCategoryId === t.id ? (
+<select
+value={t.category || "Other"}
+onChange={(e) => updateCategoryInline(t.id, e.target.value)}
+onBlur={() => setEditingCategoryId(null)}
+autoFocus
+style={{
+background: "#1e40af",
+color: "white",
+border: "none",
+borderRadius: "6px",
+fontSize: "10px",
+padding: "2px 6px"
+}}
+
+>
+{CATEGORY_OPTIONS.map(cat => (
+
+  <option key={cat} value={cat}>
+    {cat}
+  </option>
+))}
+  </select>
+) : (
+  <span
+    onClick={() => setEditingCategoryId(t.id)}
+    style={{
+      background: "#1e40af",
+      padding: "2px 6px",
+      borderRadius: "6px",
+      fontSize: "10px",
+      cursor: "pointer"
+    }}
+  >
+    {t.category || t.type}
+  </span>
+)}
+            <span
               style={{
-                color: t.type === "debit" ? "#ef4444" : "#22c55e",
-                fontWeight: "600",
-                fontSize: "13px"
+                background: "#065f46",
+                padding: "2px 6px",
+                borderRadius: "6px",
+                fontSize: "10px"
               }}
             >
-              {t.type === "debit" ? "-" : "+"}${t.amount.toFixed(2)}
-            </div>
+              completed
+            </span>
 
-            <div style={{ fontSize: "10px", opacity: 0.6 }}>
-              {new Date(t.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric"
-              })}
-            </div>
           </div>
 
         </div>
+      </div>
 
-      ))}
+      {/* RIGHT SECTION */}
+      <div
+        style={{
+          textAlign: "right",
+          flexShrink: 0,
+          marginLeft: "10px"
+        }}
+      >
+
+        <div
+          style={{
+            color: t.type === "debit" ? "#ef4444" : "#22c55e",
+            fontWeight: "600",
+            fontSize: "13px"
+          }}
+        >
+          {t.type === "debit" ? "-" : "+"}${t.amount.toFixed(2)}
+        </div>
+
+        <div
+          style={{
+            fontSize: "10px",
+            opacity: 0.6
+          }}
+        >
+          {new Date(t.created_at).toLocaleTimeString("en-IN", {
+            hour: "2-digit",
+            minute: "2-digit",
+			timeZone: "Asia/Kolkata",
+  hour12: true
+          })}
+        </div>
+
+      </div>
+
     </div>
 
+  ))}
+
+</div>
+));
+
+})()}
+</div>
   </div>
 )}
+
 
         {/* Subscriptions Tab */}
 {activeTab === "subscriptions" && (
@@ -825,13 +967,13 @@ export default function ExpenseTrackerApp() {
               marginBottom: "10px",
             }}
           >
-            <div
-              style={{
-                width: `${progress}%`,
-                background: barColor,
-                height: "100%",
-              }}
-            />
+           <div
+  style={{
+    width: `${progress}%`,
+    background: barColor,
+    height: "100%",
+  }}
+/>
           </div>
 
           {/* NEXT BILLING */}
