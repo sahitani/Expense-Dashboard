@@ -70,6 +70,10 @@ export default function ExpenseTrackerApp() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false)
+const [manualAmount, setManualAmount] = useState("")
+const [manualMerchant, setManualMerchant] = useState("")
+const [manualCategory, setManualCategory] = useState("Other")
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -239,161 +243,215 @@ export default function ExpenseTrackerApp() {
   const filteredTransactions = selectedCategory === "all" 
     ? transactions 
     : transactions.filter(t => t.category === selectedCategory);
+	
+	// Add Manual Trasanction
+	const addManualTransaction = async () => {
+
+  if (!manualAmount || !manualMerchant) {
+    alert("Amount and Merchant are required")
+    return
+  }
+
+  const { error } = await supabase.from("transactions").insert({
+    user_id: user.id,
+    amount: parseFloat(manualAmount),
+    description: manualMerchant,
+    category: manualCategory,
+    type: "debit",
+    raw_sms: "manual-entry",
+    date: new Date().toISOString().split("T")[0],
+  })
+
+  if (!error) {
+    setShowAddModal(false)
+    setManualAmount("")
+    setManualMerchant("")
+    setManualCategory("Other")
+    loadTransactions()
+  }
+}
 
   if (!user) {
-    return (
-      <div style={{
+  return (
+    <div
+      style={{
         minHeight: "100vh",
-        background: "#f5f5f5",
+        background: "#020617",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: "20px",
         fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-      }}>
-        <div style={{
-          background: "white",
-          borderRadius: "12px",
-          padding: "40px",
+      }}
+    >
+
+      <div
+        style={{
           width: "100%",
-          maxWidth: "400px",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)"
-        }}>
-          <h1 style={{
-            fontSize: "24px",
-            fontWeight: "600",
-            marginBottom: "8px",
-            color: "#000"
-          }}>
-            Expense Tracker
-          </h1>
-          <p style={{
-            color: "#666",
-            marginBottom: "32px",
-            fontSize: "14px"
-          }}>
-            Track your finances
-          </p>
+          maxWidth: "420px",
+          background: "#0f172a",
+          borderRadius: "16px",
+          padding: "32px",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.5)"
+        }}
+      >
 
-          <div style={{
-            display: "flex",
-            marginBottom: "24px",
-            borderBottom: "1px solid #e5e5e5"
-          }}>
-            <button
-              onClick={() => setAuthMode("login")}
-              style={{
-                flex: 1,
-                padding: "12px",
-                background: "none",
-                border: "none",
-                borderBottom: authMode === "login" ? "2px solid #000" : "none",
-                color: authMode === "login" ? "#000" : "#999",
-                fontWeight: "500",
-                cursor: "pointer"
-              }}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setAuthMode("register")}
-              style={{
-                flex: 1,
-                padding: "12px",
-                background: "none",
-                border: "none",
-                borderBottom: authMode === "register" ? "2px solid #000" : "none",
-                color: authMode === "register" ? "#000" : "#999",
-                fontWeight: "500",
-                cursor: "pointer"
-              }}
-            >
-              Register
-            </button>
-          </div>
-
-          {authError && (
-            <div style={{
-              padding: "12px",
-              marginBottom: "16px",
-              background: "#ffebee",
-              borderRadius: "6px",
-              color: "#c62828",
-              fontSize: "14px"
-            }}>
-              {authError}
-            </div>
-          )}
-
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{
-              display: "block",
-              marginBottom: "8px",
-              color: "#333",
-              fontSize: "14px",
-              fontWeight: "500"
-            }}>
-              Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                border: "1px solid #ddd",
-                borderRadius: "6px",
-                fontSize: "14px"
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: "24px" }}>
-            <label style={{
-              display: "block",
-              marginBottom: "8px",
-              color: "#333",
-              fontSize: "14px",
-              fontWeight: "500"
-            }}>
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px",
-                border: "1px solid #ddd",
-                borderRadius: "6px",
-                fontSize: "14px"
-              }}
-            />
-          </div>
-
-          <button
-            onClick={authMode === "login" ? login : register}
+        {/* Logo / Title */}
+        <div style={{ marginBottom: "24px" }}>
+          <div
             style={{
-              width: "100%",
-              padding: "14px",
-              background: "#000",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "14px",
-              fontWeight: "600",
-              cursor: "pointer"
+              fontSize: "28px",
+              fontWeight: "700",
+              background: "linear-gradient(90deg,#3b82f6,#9333ea,#ec4899)",
+              WebkitBackgroundClip: "text",
+              color: "transparent"
             }}
           >
-            {authMode === "login" ? "Login" : "Register"}
+            Expense Tracker
+          </div>
+
+          <div
+            style={{
+              color: "#94a3b8",
+              fontSize: "13px",
+              marginTop: "6px"
+            }}
+          >
+            Track spending from your SMS alerts
+          </div>
+        </div>
+
+        {/* Login / Register Switch */}
+        <div
+          style={{
+            display: "flex",
+            marginBottom: "20px",
+            background: "#020617",
+            borderRadius: "10px",
+            overflow: "hidden"
+          }}
+        >
+          <button
+            onClick={() => setAuthMode("login")}
+            style={{
+              flex: 1,
+              padding: "10px",
+              border: "none",
+              background: authMode === "login" ? "#3b82f6" : "transparent",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "13px"
+            }}
+          >
+            Login
+          </button>
+
+          <button
+            onClick={() => setAuthMode("register")}
+            style={{
+              flex: 1,
+              padding: "10px",
+              border: "none",
+              background: authMode === "register" ? "#9333ea" : "transparent",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "13px"
+            }}
+          >
+            Register
           </button>
         </div>
-      </div>
-    );
-  }
 
+        {authError && (
+          <div
+            style={{
+              background: "#7f1d1d",
+              color: "#fecaca",
+              padding: "10px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              marginBottom: "12px"
+            }}
+          >
+            {authError}
+          </div>
+        )}
+
+        {/* Email */}
+        <div style={{ marginBottom: "14px" }}>
+          <div
+            style={{
+              color: "#94a3b8",
+              fontSize: "12px",
+              marginBottom: "4px"
+            }}
+          >
+            Email
+          </div>
+
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid #1e293b",
+              background: "#020617",
+              color: "white"
+            }}
+          />
+        </div>
+
+        {/* Password */}
+        <div style={{ marginBottom: "18px" }}>
+          <div
+            style={{
+              color: "#94a3b8",
+              fontSize: "12px",
+              marginBottom: "4px"
+            }}
+          >
+            Password
+          </div>
+
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "8px",
+              border: "1px solid #1e293b",
+              background: "#020617",
+              color: "white"
+            }}
+          />
+        </div>
+
+        {/* Submit */}
+        <button
+          onClick={authMode === "login" ? login : register}
+          style={{
+            width: "100%",
+            padding: "12px",
+            borderRadius: "10px",
+            border: "none",
+            background: "linear-gradient(90deg,#3b82f6,#9333ea,#ec4899)",
+            color: "white",
+            fontWeight: "600",
+            cursor: "pointer"
+          }}
+        >
+          {authMode === "login" ? "Login" : "Create Account"}
+        </button>
+
+      </div>
+    </div>
+  );
+}
   return (
     <div style={{
       minHeight: "100vh",
@@ -401,8 +459,46 @@ export default function ExpenseTrackerApp() {
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       paddingBottom: "80px"
     }}>
-      {/* Main Content */}
-      <div style={{ width: "100%", maxWidth: "520px", margin: "0 auto", padding: "16px",    overflowX: "hidden" }}>
+     {/* Main Content */}
+<div style={{ maxWidth: "520px", margin: "0 auto", padding: "16px" }}>
+
+  {/* App Header */}
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: "20px"
+    }}
+  >
+    <div
+      style={{
+        fontWeight: "700",
+        fontSize: "18px",
+        background: "linear-gradient(90deg,#3b82f6,#9333ea,#ec4899)",
+        WebkitBackgroundClip: "text",
+        color: "transparent"
+      }}
+    >
+      Expense Tracker
+    </div>
+
+    <button
+      onClick={logout}
+      style={{
+        border: "none",
+        background: "#ef4444",
+        color: "white",
+        padding: "6px 12px",
+        borderRadius: "8px",
+        fontSize: "12px",
+        cursor: "pointer"
+      }}
+    >
+      Logout
+    </button>
+  </div>
+  
         
         {/* Dashboard Tab */}
         {activeTab === "dashboard" && (
@@ -432,16 +528,122 @@ export default function ExpenseTrackerApp() {
         }}
       >
         <div>
-          <div>Spent</div>
+          <div>Expenses</div>
           <div style={{ fontWeight: "600" }}>Rs. {totalSpent.toFixed(1)}</div>
         </div>
 
         <div>
-          <div>Earned</div>
+          <div>Income</div>
           <div style={{ fontWeight: "600" }}>Rs. {totalCredit.toFixed(1)}</div>
         </div>
       </div>
     </div>
+	
+	{showAddModal && (
+
+<div
+style={{
+position:"fixed",
+top:0,
+left:0,
+right:0,
+bottom:0,
+background:"rgba(0,0,0,0.6)",
+display:"flex",
+alignItems:"center",
+justifyContent:"center",
+zIndex:1000
+}}
+>
+
+<div
+style={{
+background:"#0f172a",
+padding:"20px",
+borderRadius:"12px",
+width:"320px",
+color:"white"
+}}
+>
+
+<h3 style={{marginBottom:"15px"}}>Add Transaction</h3>
+
+<input
+placeholder="Amount"
+value={manualAmount}
+onChange={(e)=>setManualAmount(e.target.value)}
+style={{
+width:"100%",
+padding:"8px",
+marginBottom:"10px",
+borderRadius:"6px"
+}}
+/>
+
+<input
+placeholder="Merchant"
+value={manualMerchant}
+onChange={(e)=>setManualMerchant(e.target.value)}
+style={{
+width:"100%",
+padding:"8px",
+marginBottom:"10px",
+borderRadius:"6px"
+}}
+/>
+
+<select
+value={manualCategory}
+onChange={(e)=>setManualCategory(e.target.value)}
+style={{
+width:"100%",
+padding:"8px",
+marginBottom:"15px",
+borderRadius:"6px"
+}}
+>
+
+{CATEGORY_OPTIONS.map(cat=>(
+<option key={cat}>{cat}</option>
+))}
+
+</select>
+
+<div style={{display:"flex",gap:"10px"}}>
+
+<button
+onClick={addManualTransaction}
+style={{
+flex:1,
+background:"#22c55e",
+border:"none",
+padding:"8px",
+borderRadius:"6px",
+color:"white"
+}}
+>
+Save
+</button>
+
+<button
+onClick={()=>setShowAddModal(false)}
+style={{
+flex:1,
+background:"#ef4444",
+border:"none",
+padding:"8px",
+borderRadius:"6px",
+color:"white"
+}}
+>
+Cancel
+</button>
+
+</div>
+
+</div>
+</div>
+)}
 
     {/* AVAILABLE + DAILY BURN */}
     <div style={{ display: "flex", gap: "12px" }}>
@@ -1079,6 +1281,34 @@ padding: "2px 6px"
           <span style={{ fontSize: "11px", fontWeight: "500" }}>Transactions</span>
         </button>
       </div>
+	  
+<button
+onClick={() => setShowAddModal(true)}
+style={{
+position: "fixed",
+bottom: "90px",
+right: "20px",
+width: "60px",
+height: "60px",
+minWidth: "60px",
+minHeight: "60px",
+maxWidth: "60px",
+maxHeight: "60px",
+borderRadius: "50%",
+background: "linear-gradient(135deg,#22c55e,#16a34a)",
+color: "white",
+border: "none",
+display: "flex",
+alignItems: "center",
+justifyContent: "center",
+boxShadow: "0 8px 20px rgba(0,0,0,0.3)",
+cursor: "pointer",
+zIndex: 1000,
+padding: 0
+}}
+>
+<Plus size={28}/>
+</button>
     </div>
   );
 }
