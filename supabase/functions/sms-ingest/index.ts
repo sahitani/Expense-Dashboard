@@ -3,7 +3,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 serve(async (req) => {
   try {
-    const { sms } = await req.json()
+    const { sms, user_id } = await req.json()
+	if (!user_id) {
+  return new Response(
+    JSON.stringify({ error: "user_id missing" }),
+    { status: 400 }
+  )
+}
 
     if (!sms) {
       return new Response(JSON.stringify({ error: "No SMS provided" }), { status: 400 })
@@ -56,9 +62,23 @@ serve(async (req) => {
       }
     }
 
-    // ---------- PARSE AMOUNT ----------
-    const amountMatch = sms.match(/Rs\.?\s?(\d+(\.\d+)?)/i)
-    const amount = amountMatch ? parseFloat(amountMatch[1]) : 0
+// ---------- PARSE AMOUNT ----------
+let amount = 0
+
+const amountPatterns = [
+  /Rs\.?\s?(\d+(\.\d+)?)/i,
+  /INR\s?(\d+(\.\d+)?)/i,
+  /debited\s*(?:by|for)?\s*(\d+(\.\d+)?)/i,
+  /credited\s*(?:by|for)?\s*(\d+(\.\d+)?)/i
+]
+
+for (const pattern of amountPatterns) {
+  const match = sms.match(pattern)
+  if (match) {
+    amount = parseFloat(match[1])
+    break
+  }
+}
 
 // ---------- DETERMINE TYPE ----------
 let type = "debit" // default
@@ -70,20 +90,22 @@ if (/debited/i.test(sms)) {
 }
 
 // ---------- MERCHANT EXTRACTION ----------
-// ---------- MERCHANT EXTRACTION (ROBUST VERSION) ----------
 let merchant = "unknown"
 
 // normalize SMS
 const normalizedSms = sms.replace(/\s+/g, " ").trim()
 
 const patterns = [
+  /([A-Za-z0-9\s&@.-]+?)\s+credited/i,                // Blinkit credited
   /credited to ([A-Za-z0-9\s&@.-]+)/i,
   /paid to ([A-Za-z0-9\s&@.-]+)/i,
+  /debited at ([A-Za-z0-9\s&@.-]+)/i,
+  /(?:trf|transfer|sent)\s+to\s+([A-Za-z0-9\s&@.-]+)/i,
   /towards ([A-Za-z0-9\s&@.-]+)/i,
   /to ([A-Za-z0-9\s&@.-]+?) via UPI/i,
   /to ([A-Za-z0-9\s&@.-]+?) UPI/i,
   /UPI\s*[-:]?\s*([A-Za-z0-9\s&@.-]+)/i,
-  /for ([A-Za-z0-9\s&@.-]+?) (?:Ref|Txn|UPI|on)/i,
+  /from ([A-Za-z0-9\s&@.-]+)/i,
 ]
 
 for (const pattern of patterns) {
@@ -105,8 +127,12 @@ if (merchant !== "unknown") {
     .replace(/Retrieval.*/i, "")
     .replace(/IMPS.*/i, "")
     .replace(/NEFT.*/i, "")
+    .replace(/A\/C.*/i, "")
     .replace(/on \d{1,2}-[A-Za-z]{3}-\d{2}.*/i, "")
     .trim()
+
+  // convert to title case
+  merchant = merchant.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
 }
 
 // ---------- FINAL SAFETY ----------
@@ -114,15 +140,35 @@ if (!merchant || merchant.length > 60) {
   merchant = "unknown"
 }
 
-    // HARD CODE YOUR USER ID HERE
-    const USER_ID = "c77cbbd3-7868-456a-bce9-d58b043e8a37"
+// ---------- CLEAN MERCHANT STRING ----------
+if (merchant !== "unknown") {
+  merchant = merchant
+    .replace(/via UPI.*/i, "")
+    .replace(/UPI.*/i, "")
+    .replace(/Ref.*/i, "")
+    .replace(/Txn.*/i, "")
+    .replace(/AutoPay.*/i, "")
+    .replace(/Retrieval.*/i, "")
+    .replace(/IMPS.*/i, "")
+    .replace(/NEFT.*/i, "")
+    .replace(/on \d{1,2}-[A-Za-z]{3}-\d{2}.*/i, "")
+    .trim()
+	// Convert to Title Case
+	merchant = merchant.toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
+
+// ---------- FINAL SAFETY ----------
+if (!merchant || merchant.length > 60) {
+  merchant = "unknown"
+}
+
 
     // ---------- CHECK USER MERCHANT RULES ----------
     let category = null
     const { data: merchantRule } = await supabase
       .from("user_merchant_rules")
       .select("category")
-      .eq("user_id", USER_ID)
+      .eq("user_id", user_id)
       .eq("merchant", merchant)
       .limit(1)
 
@@ -143,7 +189,7 @@ if (!merchant || merchant.length > 60) {
     }
 
     const { error } = await supabase.from("transactions").insert({
-      user_id: USER_ID,
+      user_id: user_id,
       amount,
       description: merchant,
       type,
@@ -157,7 +203,7 @@ if (!merchant || merchant.length > 60) {
 await supabase
   .from("user_merchant_rules")
   .upsert({
-    user_id: USER_ID,
+    user_id: user_id,
     merchant: merchant,
     category: category
   }, {
@@ -185,7 +231,7 @@ await supabase
       const { data: similarTransactions } = await supabase
         .from("transactions")
         .select("date")
-        .eq("user_id", USER_ID)
+        .eq("user_id", user_id)
         .eq("description", merchant)
         .eq("amount", amount)
         .gte("date", thirtyFiveDaysAgo.toISOString().split("T")[0])
@@ -218,7 +264,7 @@ await supabase
       await supabase
         .from("subscriptions")
         .upsert({
-          user_id: USER_ID,
+          user_id: user_id,
           merchant: merchant,
           amount: amount,
           billing_cycle: "monthly",
